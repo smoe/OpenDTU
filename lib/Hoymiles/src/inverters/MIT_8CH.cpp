@@ -95,8 +95,8 @@ static const byteAssign_t byteAssignment[] = {
 MIT_8CH::MIT_8CH(HoymilesRadio* radio, const uint64_t serial)
     : HMT_Abstract(radio, serial)
 {
-    // MIT-5000-8T returns a shorter SystemConfigPara response (38 bytes vs 48 for HMS/HMT)
-    SystemConfigPara()->setExpectedByteCount(38);
+    // MIT-5000-8T requires at least 38 reassembled SystemConfigPara response bytes
+    SystemConfigPara()->setMinimumResponseSize(38);
 }
 
 bool MIT_8CH::isValidSerial(const uint64_t serial)
