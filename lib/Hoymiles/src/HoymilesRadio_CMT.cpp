@@ -194,7 +194,7 @@ void HoymilesRadio_CMT::loop()
     // Processing the entire buffer each iteration reduces latency and prevents
     // the software buffer from growing unboundedly during bursts.
     while (!_rxBuffer.empty()) {
-        fragment_t f = _rxBuffer.back();
+        fragment_t f = _rxBuffer.front();
         if (checkFragmentCrc(f)) {
 
             // --- Capture Mode: log ALL valid frames before filtering ---
