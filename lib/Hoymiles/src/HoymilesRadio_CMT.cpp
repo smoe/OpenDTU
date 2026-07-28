@@ -372,6 +372,8 @@ void HoymilesRadio_CMT::sendEsbPacket(CommandAbstract& cmd)
 
     if (cmd.getDataPayload()[0] == 0x56) { // @todo(tbnobody) Bad hack to identify ChannelChange Command
         cmtSwitchDtuFreq(getInvBootFrequency());
+    } else {
+        cmtSwitchDtuFreq(_inverterTargetFrequency);
     }
 
     ESP_LOGD(TAG, "TX %s %.2f MHz --> %s",
