@@ -24,12 +24,5 @@ SingleDataCommand::SingleDataCommand(InverterAbstract* inv, const uint64_t route
     : CommandAbstract(inv, router_address)
 {
     _payload[0] = 0x15;
-
-    // Keep the experimental MIT recovery timeout local to that model.
-    const uint16_t prefix = (inv->serial() >> 32) & 0xffff;
-    if (prefix == 0x1520) {
-        setTimeout(2000);
-    } else {
-        setTimeout(100);
-    }
+    setTimeout(inv->getSingleDataCommandTimeout());
 }

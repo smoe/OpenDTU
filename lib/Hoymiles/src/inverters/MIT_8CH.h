@@ -10,4 +10,8 @@ public:
     String typeName() const;
     const byteAssign_t* getByteAssignment() const;
     uint8_t getByteAssignmentSize() const;
+    uint32_t getSingleDataCommandTimeout() const override;
+    uint32_t getRealTimeRunDataCommandTimeout() const override;
+    uint32_t getAlarmDataCommandTimeout() const override;
+    uint8_t getMaxRetransmitCount() const override;
 };

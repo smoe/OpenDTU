@@ -30,6 +30,7 @@
  *   70: value matches PAC — possibly apparent power (S in VA)
  */
 #include "MIT_8CH.h"
+#include "commands/CommandAbstract.h"
 
 static const byteAssign_t byteAssignment[] = {
     // DC Channel 0 (MPPT1) - offset 2
@@ -97,6 +98,26 @@ MIT_8CH::MIT_8CH(HoymilesRadio* radio, const uint64_t serial)
 {
     // MIT-5000-8T requires at least 38 reassembled SystemConfigPara response bytes
     SystemConfigPara()->setMinimumResponseSize(38);
+}
+
+uint32_t MIT_8CH::getSingleDataCommandTimeout() const
+{
+    return 2000;
+}
+
+uint32_t MIT_8CH::getRealTimeRunDataCommandTimeout() const
+{
+    return 6000;
+}
+
+uint32_t MIT_8CH::getAlarmDataCommandTimeout() const
+{
+    return 12000;
+}
+
+uint8_t MIT_8CH::getMaxRetransmitCount() const
+{
+    return MAX_MIT_RETRANSMIT_COUNT;
 }
 
 bool MIT_8CH::isValidSerial(const uint64_t serial)
