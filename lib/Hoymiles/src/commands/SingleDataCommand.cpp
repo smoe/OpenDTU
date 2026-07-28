@@ -25,11 +25,11 @@ SingleDataCommand::SingleDataCommand(InverterAbstract* inv, const uint64_t route
 {
     _payload[0] = 0x15;
 
-    // MIT-5000-8T responds to retransmit requests at ~835ms intervals
+    // Keep the experimental MIT recovery timeout local to that model.
     const uint16_t prefix = (inv->serial() >> 32) & 0xffff;
     if (prefix == 0x1520) {
         setTimeout(2000);
     } else {
-        setTimeout(250);
+        setTimeout(100);
     }
 }

@@ -134,7 +134,14 @@ uint8_t CommandAbstract::getMaxResendCount() const
 
 uint8_t CommandAbstract::getMaxRetransmitCount() const
 {
-    return MAX_RETRANSMIT_COUNT;
+    // Keep the experimental MIT recovery allowance local to that model.
+    constexpr uint16_t mitSerialPrefix = 0x1520;
+    const uint16_t serialPrefix = (_inv->serial() >> 32) & 0xffff;
+    if (serialPrefix == mitSerialPrefix) {
+        return MAX_MIT_RETRANSMIT_COUNT;
+    }
+
+    return MAX_DEFAULT_RETRANSMIT_COUNT;
 }
 
 bool CommandAbstract::areSameParameter(CommandAbstract* other)
