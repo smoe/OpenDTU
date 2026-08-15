@@ -177,12 +177,19 @@ void HoymilesRadio_CMT::loop()
 
             fragment_t f;
             memset(f.fragment, 0xcc, MAX_RF_PAYLOAD_SIZE);
-            f.len = std::min<uint8_t>(_radio->getDynamicPayloadSize(), MAX_RF_PAYLOAD_SIZE);
+            const uint8_t payloadSize = _radio->getDynamicPayloadSize();
+            f.len = std::min<uint8_t>(payloadSize, MAX_RF_PAYLOAD_SIZE);
             f.channel = _radio->getChannel();
             f.rssi = _radio->getRssiDBm();
             f.wasReceived = false;
             f.mainCmd = 0x00;
             _radio->read(f.fragment, f.len);
+
+            if (payloadSize > MAX_RF_PAYLOAD_SIZE) {
+                ESP_LOGW(TAG, "CMT2300A: Invalid payload size %" PRIu8, payloadSize);
+                continue;
+            }
+
             _rxBuffer.push(f);
         }
         _radio->flush_rx();
