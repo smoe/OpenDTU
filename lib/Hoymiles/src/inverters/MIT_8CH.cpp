@@ -96,8 +96,6 @@ static const byteAssign_t byteAssignment[] = {
 MIT_8CH::MIT_8CH(HoymilesRadio* radio, const uint64_t serial)
     : HMT_Abstract(radio, serial)
 {
-    // MIT-5000-8T requires at least 38 reassembled SystemConfigPara response bytes
-    SystemConfigPara()->setMinimumResponseSize(38);
 }
 
 uint32_t MIT_8CH::getSingleDataCommandTimeout() const
