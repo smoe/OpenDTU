@@ -13,6 +13,16 @@
 #undef TAG
 static const char* TAG = "hoymiles";
 
+static int8_t getMitHopOffsetForFragment(const uint8_t fragmentId)
+{
+    const uint8_t id = fragmentId & 0x7F;
+    if (id == 0) {
+        return 0;
+    }
+
+    return static_cast<int8_t>((id - 1) % 3) - 1;
+}
+
 constexpr CountryFrequencyDefinition_t make_value(FrequencyBand_t Band, uint32_t Freq_Legal_Min, uint32_t Freq_Legal_Max, uint32_t Freq_Default, uint32_t Freq_StartUp)
 {
     // frequency can not be lower than actual initailized base freq + 250000
@@ -390,7 +400,38 @@ void HoymilesRadio_CMT::sendEsbPacket(CommandAbstract& cmd)
         ESP_LOGE(TAG, "TX SPI Timeout");
     }
     cmtSwitchDtuFreq(_inverterTargetFrequency);
+
+    const uint16_t serialPrefix = (cmd.getTargetAddress() >> 32) & 0xFFFF;
+    const bool isRequestFrame = cmd.getDataPayload()[0] == 0x15 && cmd.getDataSize() == 11;
+    uint8_t retransmitFragmentId = 0;
+    uint8_t retransmitChannel = 0;
+    bool retransmitChannelValid = false;
+    if (serialPrefix == 0x1520 && isRequestFrame) {
+        retransmitFragmentId = cmd.getDataPayload()[9] & 0x7F;
+        if (retransmitFragmentId > 0) {
+            const uint8_t baseChannel = getChannelFromFrequency(_inverterTargetFrequency);
+            const int16_t targetChannel = static_cast<int16_t>(baseChannel) + getMitHopOffsetForFragment(retransmitFragmentId);
+
+            if (baseChannel != 0xFF && targetChannel >= 1 && targetChannel <= 0xFE) {
+                retransmitChannel = static_cast<uint8_t>(targetChannel);
+                _radio->setChannel(retransmitChannel);
+                retransmitChannelValid = true;
+            }
+        }
+    }
+
     _radio->startListening();
     _busyFlag = true;
     _rxTimeout.set(cmd.getTimeout());
+
+    if (serialPrefix == 0x1520 && isRequestFrame) {
+        if (retransmitFragmentId == 0) {
+            ESP_LOGW(TAG, "RX HOP: Ignoring invalid fragment 0 retransmit request");
+        } else if (!retransmitChannelValid) {
+            ESP_LOGE(TAG, "RX HOP: Invalid channel for fragment %" PRIu8, retransmitFragmentId);
+        } else {
+            ESP_LOGI(TAG, "RX HOP: Retransmit fragment %" PRIu8 " on channel %" PRIu8 " (%.2f MHz)",
+                retransmitFragmentId, retransmitChannel, getFrequencyFromChannel(retransmitChannel) / 1000000.0);
+        }
+    }
 }
