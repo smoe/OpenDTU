@@ -42,6 +42,24 @@ void WebApiEventlogClass::onEventlogStatus(AsyncWebServerRequest* request)
         uint8_t logEntryCount = inv->EventLog()->getEntryCount();
 
         root["count"] = logEntryCount;
+        if (inv->Statistics()->hasChannelFieldValue(TYPE_INV, CH0, FLD_EVT_LOG)) {
+            root["reported_count"] = static_cast<uint16_t>(inv->Statistics()->getChannelFieldValue(TYPE_INV, CH0, FLD_EVT_LOG));
+        } else {
+            root["reported_count"] = -1;
+        }
+
+        switch (inv->EventLog()->getLastAlarmRequestSuccess()) {
+        case CMD_OK:
+            root["last_request_status"] = "ok";
+            break;
+        case CMD_PENDING:
+            root["last_request_status"] = "pending";
+            break;
+        default:
+            root["last_request_status"] = "failure";
+            break;
+        }
+
         JsonArray eventsArray = root["events"].to<JsonArray>();
 
         for (uint8_t logEntry = 0; logEntry < logEntryCount; logEntry++) {
