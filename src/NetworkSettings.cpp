@@ -111,9 +111,10 @@ void NetworkSettingsClass::NetworkEvent(const WiFiEvent_t event, WiFiEventInfo_t
         _stationDisconnectReason = info.wifi_sta_disconnected.reason;
         if (_networkMode == network_mode::WiFi) {
             // Deliberately stopping STA during the AP recovery window must not restart it.
-            if (_performConnection) {
+            if (_performConnection && wifiConfigured()) {
                 ESP_LOGI(TAG, "Try reconnecting");
                 _lastReconnectAttempt = millis();
+                cancelWifiScan();
                 WiFi.disconnect(true, false);
                 WiFi.begin();
             }
@@ -217,6 +218,7 @@ void NetworkSettingsClass::setupMode()
 void NetworkSettingsClass::enableAdminMode()
 {
     cancelWifiScan();
+    restoreWifiScanMode();
     // This prevents a immediate "Disabling search for AP" when
     // the network connection persists for a long time and the
     // credentials gets changed.
@@ -254,6 +256,7 @@ void NetworkSettingsClass::loop()
     if (_ethConnected) {
         if (_networkMode != network_mode::Ethernet) {
             cancelWifiScan();
+            restoreWifiScanMode();
             // Do stuff when switching to Ethernet mode
             ESP_LOGI(TAG, "Switch to Ethernet mode");
             _networkMode = network_mode::Ethernet;
@@ -337,6 +340,7 @@ void NetworkSettingsClass::loop()
 void NetworkSettingsClass::applyConfig()
 {
     cancelWifiScan();
+    restoreWifiScanMode();
     _stationDisconnectReason = -1;
     setHostname();
 
@@ -617,13 +621,14 @@ void NetworkSettingsClass::restoreWifiScanMode()
 
 void NetworkSettingsClass::cancelWifiScan()
 {
+    std::lock_guard<std::mutex> lock(_wifiScanMutex);
     if (_wifiScanActive && !_wifiScanCancelled.exchange(true)) {
-        esp_wifi_scan_stop();
-        restoreWifiScanMode();
-        std::lock_guard<std::mutex> lock(_wifiScanMutex);
         _wifiScanStatus.state = "failed";
         _wifiScanStatus.error = "busy";
         _wifiScanStatus.count = 0;
+        // Stop before a disconnect handler resets the driver. Keep ownership
+        // until SCAN_DONE releases Arduino's results; a new scan must wait.
+        esp_wifi_scan_stop();
     }
 }
 
@@ -634,6 +639,9 @@ void NetworkSettingsClass::processWifiScan()
     const uint32_t now = millis();
 
     if (_wifiScanActive) {
+        if (_wifiScanCancelled) {
+            restoreWifiScanMode();
+        }
         if (_wifiScanCompleted.exchange(false)) {
             restoreWifiScanMode();
             std::lock_guard<std::mutex> lock(_wifiScanMutex);
@@ -642,6 +650,7 @@ void NetworkSettingsClass::processWifiScan()
             _wifiScanActive = false;
         } else if (!_wifiScanCancelled && now - _wifiScanStarted >= timeout) {
             cancelWifiScan();
+            restoreWifiScanMode();
             std::lock_guard<std::mutex> lock(_wifiScanMutex);
             _wifiScanStatus.error = "timeout";
         }
